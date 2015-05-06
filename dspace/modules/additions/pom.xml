@@ -96,7 +96,27 @@
             </exclusion>
          </exclusions>
       </dependency>
-
+      <!-- Propios para Login de Google-->
+      <dependency>
+         <groupId>org.eclipse.jetty</groupId>
+         <artifactId>jetty-server</artifactId>
+         <version>8.1.8.v20121106</version>
+      </dependency>
+      <dependency>
+         <groupId>org.eclipse.jetty</groupId>
+         <artifactId>jetty-servlet</artifactId>
+         <version>8.1.8.v20121106</version>
+      </dependency>
+      <dependency>
+         <groupId>com.google.guava</groupId>
+         <artifactId>guava</artifactId>
+         <version>14.0.1</version>
+      </dependency>
+      <dependency>
+         <groupId>com.googlecode.json-simple</groupId>
+         <artifactId>json-simple</artifactId>
+         <version>1.1</version>
+      </dependency>
    </dependencies>
 
 </project>

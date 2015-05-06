@@ -323,6 +323,6 @@ public class IPAuthentication implements AuthenticationMethod
 
     public String loginPageTitle(Context context)
     {
-        return null;
+        return "GPlus Login";
     }
 }
