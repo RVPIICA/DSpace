@@ -57,12 +57,23 @@ public class GPlusAuthentication implements AuthenticationMethod {
     private String appDomain = ConfigurationManager.getProperty("authentication-gplus", "domain");
 
     /*No lo requiero*/
-    public boolean canSelfRegister(Context context,
-                                   HttpServletRequest request,
-                                   String email)
-            throws SQLException
-    {
-        return false;
+    public boolean canSelfRegister(Context context, HttpServletRequest request, String email) throws SQLException {
+        String domains = ConfigurationManager.getProperty("authentication-gplus", "domain.valid");
+        if(domains != null && !domains.trim().equals("")) {
+            String[] options = domains.trim().split(",");
+            email = email.trim().toLowerCase();
+
+            for(int i = 0; i < options.length; ++i) {
+                String check = options[i].trim().toLowerCase();
+                if(email.endsWith(check)) {
+                    return true;
+                }
+            }
+
+            return false;
+        } else {
+            return true;
+        }
     }
     /* No lo requiero */
     public void initEPerson(Context context,
@@ -114,7 +125,7 @@ public class GPlusAuthentication implements AuthenticationMethod {
                 usuario = ObtenerInfoUsuario(request);
             }catch (Exception e){
                 log.error(e.getMessage());
-                return BAD_CREDENTIALS;
+                return BAD_ARGS;
             }
 
             String email = (String) usuario.get("email");
@@ -131,7 +142,12 @@ public class GPlusAuthentication implements AuthenticationMethod {
 
                 if(ePerson == null){
                     log.info("GPLUS EPerson not found, trying to register into system");
-                    ePerson = RegistrarEPerson(context, request, email, nombre, apellido);
+                    if(canSelfRegister(context, request, email)){
+                        ePerson = RegistrarEPerson(context, request, email, nombre, apellido);
+                    }else{
+                        log.info("GPLUS This email domain can't be registered");
+                        return BAD_CREDENTIALS;
+                    }
                 }
 
                 log.info("GPlus Logging in EPerson");
