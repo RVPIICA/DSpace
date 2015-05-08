@@ -459,7 +459,13 @@
     <servlet-name>shibboleth-login</servlet-name>
     <servlet-class>org.dspace.app.webui.servlet.ShibbolethServlet</servlet-class>
   </servlet>
-  
+
+    <!-- Google Plus Login Servlet-->
+    <servlet>
+        <servlet-name>gplus-login</servlet-name>
+        <servlet-class>org.dspace.app.webui.servlet.GPlusServlet</servlet-class>
+    </servlet>
+
   <servlet>
   	<servlet-name>json</servlet-name>
   	<servlet-class>org.dspace.app.webui.servlet.JSONServlet</servlet-class>
@@ -486,9 +492,14 @@
   </servlet>
     	
   <servlet-mapping>
-    <servlet-name>shibboleth-login</servlet-name>
-    <url-pattern>/shibboleth-login</url-pattern>
+    <servlet-name>gplus-login</servlet-name>
+    <url-pattern>/gplus-login</url-pattern>
   </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>shibboleth-login</servlet-name>
+        <url-pattern>/shibboleth-login</url-pattern>
+    </servlet-mapping>
  
   <!-- Servlet Mappings -->
 
