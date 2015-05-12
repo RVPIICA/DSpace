@@ -34,6 +34,7 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import org.dspace.eperson.Group;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -43,6 +44,9 @@ import com.google.common.collect.ImmutableMap;
 /**
  * @author Randall Vargas Padilla
  * @version $Revision$
+ *
+ * Clase implementada para autenticar a los usuarios
+ * por medio del sistema OAuth 2.0 de Google.
  */
 public class GPlusAuthentication implements AuthenticationMethod {
 
@@ -122,7 +126,7 @@ public class GPlusAuthentication implements AuthenticationMethod {
 
         if(code == null){//Usuario no se autentica o no da consentimiento a la aplicacion en goolge
 
-            log.info("GPlus User didn't consent application");
+            log.info("GPlus User didn't consent application, not authenticating");
             return CERT_REQUIRED;
 
         }else{//El formulario de autenticación (Página de autenticación de Google me retornó un código de autorización)
@@ -155,6 +159,7 @@ public class GPlusAuthentication implements AuthenticationMethod {
                     log.info("GPLUS EPerson not found, trying to register into system");
                     if(canSelfRegister(context, request, email)){//Compruebo si la persona puede registrarse (Pertenece al IICA)
                         ePerson = RegistrarEPerson(context, request, email, nombre, apellido);//Registro una nueva EPerson al sistema
+                        AsignarGrupo(ePerson, context);
                     }else{
                         log.info("GPLUS This email domain can't be registered");
                         return BAD_CREDENTIALS;
@@ -193,6 +198,36 @@ public class GPlusAuthentication implements AuthenticationMethod {
 
     {
         return "Google Authentication";
+    }
+    /*
+     * Asigna los nuevos usuarios registrados al
+     * grupo establecido en el archvio
+     * authentication-gplus.cfg en el parametro
+     * group.name
+     */
+    private void AsignarGrupo(EPerson ePerson, Context context)
+    {
+        String nombreGrupo = ConfigurationManager.getProperty("authentication-gplus", "group.name");
+
+        try{
+            log.trace("GPlus trying to find group: " + nombreGrupo);
+            Group grupo = Group.findByName(context, nombreGrupo);
+
+            if(grupo != null){
+                log.trace("GPlus registering user in group: " + nombreGrupo);
+                grupo.addMember(ePerson);
+                grupo.update();
+                context.commit();
+            }else{
+                log.trace("GPlus Group: " + nombreGrupo + " not found.");
+            }
+
+        }catch (SQLException ex){
+            log.error("GPLUS Error ocurred trying to add user to a group. SQLException");
+        }catch (AuthorizeException ex){
+            log.error("GPlus Error ocurred trying to add user to a group. AuthorizationException");
+        }
+
     }
 
     //Otras clases para Login de Google.
