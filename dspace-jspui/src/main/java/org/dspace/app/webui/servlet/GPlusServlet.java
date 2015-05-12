@@ -22,12 +22,20 @@ public class GPlusServlet extends DSpaceServlet{
 
     private static Logger log = Logger.getLogger(DSpaceServlet.class);
 
+
+    /*Método que se invoca cuando el Servlet es invocado
+    * desde la dirección domain.dom/gplus-login
+    * (Ver path: dspace-jspui/src/main/webapp/WEB-INF/web.xml)
+    * Éste método es el que invoca los métodos POST y GET
+    * que se ejecutan posterior a que el usuario es
+    * redireccionado a la página de Google y proporciona
+    * su Usuario y Contraseña.
+    */
     protected void doDSGet(Context context,
                            HttpServletRequest request,
                            HttpServletResponse response)
             throws ServletException, IOException, SQLException, AuthorizeException
     {
-        log.info("Almos authenticating user");
         int status = AuthenticationManager.authenticate(context, null, null, null, request);
 
         String error = null;

@@ -56,7 +56,7 @@ public class GPlusAuthentication implements AuthenticationMethod {
     private String clientSecret = ConfigurationManager.getProperty("authentication-gplus", "client_secret");
     private String appDomain = ConfigurationManager.getProperty("authentication-gplus", "domain");
 
-    /*No lo requiero*/
+    /*Implementado igual que en Password Login para verificar de acuerdo al dominio si el usuario puede ingresar.*/
     public boolean canSelfRegister(Context context, HttpServletRequest request, String email) throws SQLException {
         String domains = ConfigurationManager.getProperty("authentication-gplus", "domain.valid");
         if(domains != null && !domains.trim().equals("")) {
@@ -101,6 +101,16 @@ public class GPlusAuthentication implements AuthenticationMethod {
         return new int[0];
     }
 
+    /*
+     *Método principal de autenticación, es invocado desde GPlusServlet.java
+     * después de que el usuario obtine un código de autorización tras proporcionar
+     * usuario, clave y consentimiento en la página de Google.
+     * Ejecuta POST para obtener el token de autorización intercambiando
+     * el client_id y client_secret. Posteriormente ejecuto
+     * el GET que me retorna el JSON con la información del usuario
+     * que utilizo para autenticar o generar un nuevo usuario en
+     * caso que no sea un usuario registrado.
+     */
     public int authenticate(Context context,
                             String username,
                             String password,
@@ -115,14 +125,14 @@ public class GPlusAuthentication implements AuthenticationMethod {
             log.info("GPlus User didn't consent application");
             return CERT_REQUIRED;
 
-        }else{
+        }else{//El formulario de autenticación (Página de autenticación de Google me retornó un código de autorización)
 
             log.info("GPLUS Attempting to authenticate JSON User and get it's information");
 
             JSONObject usuario = null;
 
             try{
-                usuario = ObtenerInfoUsuario(request);
+                usuario = ObtenerInfoUsuario(request);//Intento obtener la información de usuario desde Google
             }catch (Exception e){
                 log.error(e.getMessage());
                 return BAD_ARGS;
@@ -137,13 +147,14 @@ public class GPlusAuthentication implements AuthenticationMethod {
             EPerson ePerson = null;
 
             try{
+                //Trato de encontrar la EPerson que coincida con el correo
                 log.info("GPLUS Trying to find EPerson by Email");
                 ePerson = EPerson.findByEmail(context, email);
 
-                if(ePerson == null){
+                if(ePerson == null){//No encontré la EPerson
                     log.info("GPLUS EPerson not found, trying to register into system");
-                    if(canSelfRegister(context, request, email)){
-                        ePerson = RegistrarEPerson(context, request, email, nombre, apellido);
+                    if(canSelfRegister(context, request, email)){//Compruebo si la persona puede registrarse (Pertenece al IICA)
+                        ePerson = RegistrarEPerson(context, request, email, nombre, apellido);//Registro una nueva EPerson al sistema
                     }else{
                         log.info("GPLUS This email domain can't be registered");
                         return BAD_CREDENTIALS;
@@ -157,7 +168,7 @@ public class GPlusAuthentication implements AuthenticationMethod {
 
                 log.info("GPlus Login Succes");
 
-                return SUCCESS;
+                return SUCCESS;//Autenticación Exitosa!!
 
             }catch (AuthorizeException e){
                 log.trace("GPLUS Failed to authorize looking up EPerson", e);
@@ -166,7 +177,11 @@ public class GPlusAuthentication implements AuthenticationMethod {
 
         }
     }
-
+    /*
+     * Redirecciona a la dirección de LogIn (En este caso la página de autenticación de Google
+     * Es la única vez que tengo que redireccionar ya que lo demás se realiza por medio de
+     * llamados POST y GET.
+     */
     public String loginPageURL(Context context,
                                HttpServletRequest request,
                                HttpServletResponse response)
@@ -182,6 +197,9 @@ public class GPlusAuthentication implements AuthenticationMethod {
 
     //Otras clases para Login de Google.
 
+    /*
+     *Forma el URL para redireccionar (Donde digito usuario y contraseña de google)
+     */
     private String FormarSignInURL(HttpServletRequest request)
     {
 
@@ -212,6 +230,8 @@ public class GPlusAuthentication implements AuthenticationMethod {
 
             String code = request.getParameter("code");
 
+
+            //Cambio el código de autorización que me brinda google así como client_secret y client_id por authorization_code
             String post = Ejecutar_POST("https://accounts.google.com/o/oauth2/token", ImmutableMap.<String, String>builder()
                           .put("code", code)
                           .put("client_id", clientID)
@@ -224,6 +244,7 @@ public class GPlusAuthentication implements AuthenticationMethod {
             log.info("GPLUS Trying to Parse JSON and get Authorization Code");
 
             try{
+                //Parseo el JSON que contiene el código de autorización.
                 jsonObject = Parsear_JSON(post);
             }catch (ParseException e){
                 throw new RuntimeException("GPLUS JSON returned by Google is null or can't be parsed");
@@ -231,6 +252,7 @@ public class GPlusAuthentication implements AuthenticationMethod {
 
             log.info("GPLUS GET to Google to get user information");
 
+            //Ejecuto GET que incluye la información del usuario en formato JSON
             String usuarioJSON = Ejecutar_GET("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + ((String) jsonObject.get("access_token")));
 
             try{
@@ -287,7 +309,7 @@ public class GPlusAuthentication implements AuthenticationMethod {
             return body;
         }
     }
-
+    /*Utilizado para registrar una nueva EPerson utilizando Nombre, Apellido y Correo proporcionado por la consulta a Google*/
     private EPerson RegistrarEPerson(Context context, HttpServletRequest request, String email, String nombre, String apellido) throws SQLException, AuthorizeException
     {
         context.turnOffAuthorisationSystem();
